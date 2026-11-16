@@ -2,6 +2,26 @@
 
 ## System Scope and Complexity Analysis
 
+> **Analysis date:** 2026-10-14 repository snapshot  
+> **Repository:** cosmosai_V2-rebuild  
+> **Basis:** Current FastAPI/Next.js implementation, ORM models, Alembic migrations, tests, deployment configuration, help content, and runtime scripts.  
+> **Purpose:** Evaluate the platform's functional breadth, architectural intricacy, operational burden, and likely maintenance effort.
+
+## Contents
+
+- [1. Executive assessment](#1-executive-assessment)
+- [2. What the platform is for](#2-what-the-platform-is-for)
+- [3. Architecture](#3-architecture)
+- [4. Functional scope](#4-functional-scope)
+- [5. Authentication, RBAC, and user types](#5-authentication-rbac-and-user-types)
+- [6. Weekly report subsystem](#6-weekly-report-subsystem)
+- [7. Scheduling and calendar subsystem](#7-scheduling-and-calendar-subsystem)
+- [8. AI email assistant](#8-ai-email-assistant)
+- [9. Notifications and mail integration](#9-notifications-and-mail-integration)
+- [10. Background and scheduled work](#10-background-and-scheduled-work)
+
+---
+
 CosMos AI V2 — System Scope and Complexity Analysis
 Analysis date: 2026-10-14 repository snapshot
 Repository: cosmosai_V2-rebuild
@@ -625,128 +645,4 @@ E2E coverage is much smaller than the page count;
 many business rules are encoded in code comments and tests rather than one formal domain specification.
 15. Implemented, partial, and absent features
 Implemented
-multi-tenant organization/business/company/agency model;
-six-role RBAC and invitation lifecycle;
-courses, seasons, campaigns, creatives, approvals, files, and performance;
-training-round operations with dashboard aggregation, inline editing, duplication, deletion, effective-period overrides, and role-specific list behavior;
-UTM generation and public tracked redirects;
-schedule calendar and reminders;
-weekly reports and reminders;
-AI email compose/reply/refine and personal draft storage;
-notification outbox, preferences, idempotency, and transport audit;
-SMTP, production JCG external mailer, and centralized mail-management controls;
-multi-format Excel/ZIP exports, season-level PDF merging, per-campaign document bundles, and automated document triggers;
-issuing information, ad-product catalog, document-layout storage/assignment/preview, and generated-document ledger;
-Feedback V2 diagnostics, AI triage, development handoff, error logs, Slack digest/monitor, pool readiness, and backup script;
-read-only TAP Wiki feed;
-super-admin AIW and read-only Git tools;
-Korean/English UI and help.
-Partial or pilot-stage
-document layouts: catalog, assignment, editor, and preview are implemented, but assigned layouts are not yet applied by normal issuance;
-document chain: manual/auto governance exists, but some report/template/data paths remain gated;
-Popbill tax e-issuance: guarded relay client exists; routes, UI, production scope, and live calls do not;
-platform-data use in email assistant: facts are manually inserted into prompt text, not fetched invisibly by the LLM;
-Git Manage: read-only, no deploy trigger;
-help coverage: fewer guides than major screens;
-GitHub Actions deployment: retained but dormant; production releases are manual.
-IDC/Coolify migration and staging: planned by the infrastructure team but not yet the active production path.
-Not implemented
-inbox/IMAP/webhook email ingestion;
-sending from the email-assistant screen;
-AI generation or summarization of weekly reports;
-ad-platform auto-sync;
-ClickHouse analytics;
-Redis/Celery queue and workers;
-native mobile or desktop clients;
-UI-triggered Git deployment;
-object-storage replication/backup managed by this repository;
-per-device session revocation.
-16. Main complexity drivers
-16.1 RBAC is multidimensional
-Six roles alone are manageable. The complexity comes from combining role with organization, business, company, agency, duty assignments, ownership, read/write asymmetry, feature switches, and special sheets. Every new query needs an explicit answer for each relevant scope.
-16.2 Business entities are not a simple tree
-Organization-level companies and agencies participate in multiple businesses. Schedules can be filed under one business while referring to another business's company in the same organization. Work groups span businesses. These are valid domain requirements but create sophisticated joins and validation.
-16.3 Campaign lifecycle has many side effects
-A campaign can affect creative status, approval queues, performance, UTM, notifications, generated documents, document versions, closing-document requests, and timed transitions. Failure isolation and idempotency are therefore essential.
-16.4 Communication is a subsystem
-The product has personal AI drafts, shared/personal templates, notification preferences, an append-only outbox, SMTP, an external AI mailer, external-send audit, attachments, retries, idempotency, and multiple scheduled reminder policies. “Email” is not one integration; it is several related systems with different trust and delivery contracts.
-16.5 Scheduling contains business calendars
-Calendar dates, KST wall-clock behavior, weekend handling, public holidays, Monday/Tuesday report rules, Friday-to-Monday schedule reminders, and missed-run behavior are domain logic that needs tests and operational scheduling.
-16.6 Legacy migration and cutover remain relevant
-The platform preserves V1 object keys, supports a mirror-bucket transition, consolidates old company/agency grain, and has historical migration/restore procedures. Until V1 is fully retired, changes must consider both V2 correctness and cutover compatibility.
-16.7 Operational controls and dependencies
-The application includes tests, backup validation, structured logging, fail-closed configuration, pool-aware readiness, and out-of-process Slack monitoring. CI, deployment, and cron are manually or host managed; rate limits are process-local; object storage has no repository-managed replication; and mail calls are synchronous.
-16.8 Configuration and document governance are now first-class domains
-Organization switches now alter notification events, user exclusions, creative approval, closing-document sets, quotation auto-issue, document-chain mode, document-ledger registration, context-page visibility, shared service descriptions, and mail controls. Issuing identity, ad-product mappings, layout assignments, manual/automatic provenance, screenshots, and opt-in delivery further affect what a document means and who receives it. This is useful configurability, but it increases the number of valid states and regression combinations well beyond the raw table increase.
-16.9 Working tree and deployed schema can diverge
-Code head and the documented production database are at migration 0065, while the inspected local database is at 0064. Startup revision checks warn about this state, but migration sequencing and environment verification remain part of every release. Table-count claims must name the Alembic revision and whether alembic_version is included.
-17. Risks and recommended evaluation points
-These are not all bugs; they are areas that increase ownership cost or deserve confirmation before production evaluation.
-Keep live deployment evidence current. README and DEPLOYMENT now agree that KCCI production is live; periodically verify the running image SHA, Alembic revision, monitor, cron entries, and mailer mode against those documents.
-Ensure role/org/provider-company changes revoke sessions. Verify all authority-changing user updates bump token_version.
-Generate a shared role contract. Reduce duplicated backend/frontend role strings and ad hoc page checks.
-Add frontend route-level access handling. Keep API authority, but avoid rendering inaccessible screens before an API refusal.
-Strengthen authorization regression checks. Authentication sweep tests cannot prove that every service query is correctly scoped.
-Document the scope model. Especially distinguish provider company identity from staff company-duty assignments.
-Add database integrity monitoring. With no FKs, periodic orphan/cross-tenant consistency checks would detect bad direct writes.
-Keep ORM registration and schema-count checks automated. Prevent Alembic metadata drift, including models that may be omitted from the central registry.
-Separate background work when volume grows. A durable queue/worker would isolate slow external mail, retries, concurrency, and dead letters.
-Monitor cron freshness. Alert on last successful execution, not only endpoint errors.
-Finish notification-log and mail-console parity. Ensure every new event remains filterable, understandable, and governed consistently.
-Close backup gaps. Replicate object storage and deliver backup failures to a monitored human channel.
-Restore automated CI enforcement so the existing suite runs consistently.
-Protect the completed JCG mailer cutover. Monitor real-recipient runs, keep credential mail on SMTP, and make production/test mode visible in operational checks.
-Track incomplete document integrations explicitly. Separate layout preview from live layout application, PDF tax documents from Popbill e-issuance, and schema/API work from a migrated deployment.
-Monitor Feedback V2 retention and bridge delivery. Verify purge freshness, failed handoffs, token/HMAC configuration, and access to diagnostic bundles.
-Add cron/backup success telemetry so a missing host job is reported directly.
-18. Complexity conclusion
-CosMos AI V2 is a business-operations platform covering program structure, advertising execution, staff work, documents, communication, reporting, and operational support.
-At current code head it has 51 application tables, 239 API handlers, 54 frontend pages, 66 migrations, 162 backend test modules, and 25 browser E2E specifications. Seven scheduled endpoints support lifecycle transitions, reminders, error reporting, feedback retention, and development-bridge synchronization. The main sources of complexity are:
-role and scope determine which tenant/business/company/agency data can be read or changed;
-campaigns drive creative, approval, performance, notification, and document workflows;
-weekly work and scheduling encode staffing, holiday, and time-zone policies;
-communications span AI drafting, SMTP, external AI composition, attachments, preferences, audit, and retries;
-production operation depends on exact migration sequencing, object storage, seven cron endpoints, backups, external APIs, readiness monitoring, and Slack alerts.
-The runtime topology is compact, but the domain and configuration surface is broad. Role scopes, organization switches, campaign state, training rounds, document provenance, mail preferences, diagnostics, and external delivery state create many valid combinations. Maintenance therefore requires coordination across product operations, FastAPI, Next.js, MySQL, deployment, security, JCG mail, document generation/layouts, the feedback bridge, and future Popbill issuance.
-19. Primary evidence paths
-README.md
-DEPLOYMENT.md
-docker-compose.yml
-docker-compose.prod.yml
-api/pyproject.toml
-api/app/main.py
-api/app/api/router.py
-api/app/api/cron.py
-api/app/auth/deps.py
-api/app/auth/scope.py
-api/app/core/config.py
-api/app/core/email.py
-api/app/core/jcg_mailer.py
-api/app/core/popbill_client.py
-api/app/core/slack.py
-api/app/models/
-api/app/migrations/versions/
-api/app/services/email_draft_service.py
-api/app/services/llm/
-api/app/services/notifications/
-api/app/services/weekly_report_service.py
-api/app/services/weekly_report_reminders.py
-api/app/services/schedule_service.py
-api/app/services/schedule_reminder_notifications.py
-api/app/services/documents/
-api/app/services/organization_settings_service.py
-api/app/services/training_round_service.py
-api/app/services/feedback_diagnostics_service.py
-api/app/services/feedback_handoff_service.py
-api/app/api/wiki_api.py
-api/app/api/feedback.py
-api/app/services/user_management_service.py
-api/app/services/invitation_service.py
-api/app/services/aiw_service.py
-api/app/services/git_service.py
-api/tests/
-web/app/
-web/components/app-shell.tsx
-web/next.config.mjs
-web/e2e/
-Untracked root/TAP Markdown files were treated as planning or legacy reference material unless their claims matched current V2 code.
+multi-tenant organization/business/
